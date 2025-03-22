@@ -10,7 +10,7 @@
 ;; ----------------------
 
 ;; The principal that signs winner messages
-(define-constant TRUSTED_SIGNER 'SP2J6ZY48GV1EZ5V2V5RB9MP66SW86PYKKNRV9EJ7)
+(define-constant TRUSTED_SIGNER 'STF0V8KWBS70F0WDKTMY65B3G591NN52PR4Z71Y3) ;; TODO: Replace with the actual signer
 
 ;; Error codes
 (define-constant ERR_POOL_ALREADY_EXISTS u1)
@@ -21,6 +21,7 @@
 (define-constant ERR_TRANSFER_FAILED u6)
 (define-constant ERR_REWARD_ALREADY_CLAIMED u7)
 (define-constant ERR_INVALID_SIGNATURE u8)
+(define-constant ERR_INVALID_AMOUNT u9)
 
 ;; ----------------------
 ;; DATA STRUCTURES
@@ -173,6 +174,9 @@
             ;; Verify the signature matches trusted signer
             (asserts! (is-eq (unwrap! (principal-of? recovered-public-key) (err ERR_INVALID_SIGNATURE)) TRUSTED_SIGNER)
                 (err ERR_INVALID_SIGNATURE))
+
+            ;; Validate the amount
+            (asserts! (> amount u0) (err ERR_INVALID_AMOUNT))
 
             ;; Transfer the reward to the winner
             (match (as-contract (stx-transfer? amount tx-sender tx-sender))
