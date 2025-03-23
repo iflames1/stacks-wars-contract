@@ -10,7 +10,8 @@
 ;; ----------------------
 
 ;; The principal that signs winner messages
-(define-constant TRUSTED_SIGNER 'STF0V8KWBS70F0WDKTMY65B3G591NN52PR4Z71Y3) ;; TODO: Replace with the actual signer
+(define-constant TRUSTED_SIGNER 'STF0V8KWBS70F0WDKTMY65B3G591NN52PR4Z71Y3) ;; TODO: Replace with the actual signer before deployment
+(define-constant TRUSTED_PUBLIC_KEY 0344cd4192cf784a16db70a8b26edd7e6887e2509b6d85d6fbc24f4cfe23caf395)
 
 ;; Error codes
 (define-constant ERR_POOL_ALREADY_EXISTS u1)
@@ -22,6 +23,8 @@
 (define-constant ERR_REWARD_ALREADY_CLAIMED u7)
 (define-constant ERR_INVALID_SIGNATURE u8)
 (define-constant ERR_INVALID_AMOUNT u9)
+(define-constant ERR_INVALID_FORMAT u10)
+(define-constant ERR_MAXIMUM_REWARD_EXCEEDED u11)
 
 ;; ----------------------
 ;; DATA STRUCTURES
@@ -45,6 +48,9 @@
     {claimed: bool, amount: uint}
 )
 
+;; Track when a function is already executing (reentrancy guard)
+(define-data-var executing bool false)
+
 ;; A variable to track the next available pool ID
 (define-data-var next-pool-id uint u1)
 
@@ -67,6 +73,18 @@
     (match (map-get? claimed-rewards {pool-id: pool-id, player: player})
         claimed-data (get claimed claimed-data)
         false
+    )
+)
+
+;; Function to prevent reentrancy attacks
+(define-private (guard (callback (lambda () (response bool uint))))
+    (begin
+        (asserts! (not (var-get executing)) (err ERR_TRANSFER_FAILED))
+        (var-set executing true)
+        (let ((result (callback)))
+            (var-set executing false)
+            result
+        )
     )
 )
 
@@ -157,44 +175,65 @@
 ;; Function for winners to claim rewards using signed messages
 ;; In this version, the signature is pre-calculated off-chain and verified on-chain
 (define-public (claim-reward (pool-id uint) (amount uint) (signature (buff 65)))
-    (begin
-        ;; Check if pool exists
-        (asserts! (pool-exists pool-id) (err ERR_POOL_NOT_FOUND))
+    (guard (lambda ()
+        (begin
+            ;; Check if pool exists
+            (asserts! (pool-exists pool-id) (err ERR_POOL_NOT_FOUND))
 
-        ;; Check if reward has already been claimed
-        (asserts! (not (reward-claimed pool-id tx-sender)) (err ERR_REWARD_ALREADY_CLAIMED))
+            ;; Check if reward has already been claimed
+            (asserts! (not (reward-claimed pool-id tx-sender)) (err ERR_REWARD_ALREADY_CLAIMED))
 
-        ;; Use a pre-computed message hash for verification
-        ;; In a real implementation, you would construct and hash the message on-chain
-        ;; For simplicity, we assume the signature is computed correctly off-chain
-        (let (
-            (msg-hash (sha256 0x0000))  ;; Simplified for testing - in production use proper message construction
-            (recovered-public-key (unwrap! (secp256k1-recover? msg-hash signature) (err ERR_INVALID_SIGNATURE)))
-        )
-            ;; Verify the signature matches trusted signer
-            (asserts! (is-eq (unwrap! (principal-of? recovered-public-key) (err ERR_INVALID_SIGNATURE)) TRUSTED_SIGNER)
-                (err ERR_INVALID_SIGNATURE))
+            ;; Get pool data to check balance
+            (let ((pool-data (unwrap! (map-get? pools {pool-id: pool-id}) (err ERR_POOL_NOT_FOUND))))
+                ;; Ensure the amount doesn't exceed the pool balance
+                (asserts! (<= amount (get balance pool-data)) (err ERR_MAXIMUM_REWARD_EXCEEDED))
 
-            ;; Validate the amount
-            (asserts! (> amount u0) (err ERR_INVALID_AMOUNT))
-
-            ;; Transfer the reward to the winner
-            (match (as-contract (stx-transfer? amount tx-sender tx-sender))
-                success
-                (begin
-                    ;; Mark reward as claimed
-                    (map-set claimed-rewards
-                        {pool-id: pool-id, player: tx-sender}
-                        {claimed: true, amount: amount}
-                    )
-
-                    ;; Return success
-                    (ok true)
+                ;; Construct the message string in the format "pool-id-amount"
+                ;; This must match the off-chain format: "2-5" for pool-id 2, amount 5
+                (let (
+                    (message-string (concat (int-to-ascii pool-id) (concat "-" (int-to-ascii amount))))
+                    ;; Convert string to buffer and unwrap the optional before hashing
+                    (message-buff (unwrap! (to-consensus-buff? message-string) (err ERR_INVALID_FORMAT)))
+                    ;; Use the SHA-256 hash function on the unwrapped buffer
+                    (msg-hash (sha256 message-buff))
                 )
-                error (err ERR_TRANSFER_FAILED)
+                    ;; Directly verify the signature against the trusted public key
+                    (asserts! (secp256k1-verify msg-hash signature TRUSTED_PUBLIC_KEY)
+                            (err ERR_INVALID_SIGNATURE))
+
+                    ;; Ensure the claimed amount is greater than zero
+                    (asserts! (> amount u0) (err ERR_INVALID_AMOUNT))
+
+                    ;; Transfer the reward from the contract to the user
+                    ;; Fixed: removed redundant nested as-contract
+                    (match (as-contract (stx-transfer? amount tx-sender contract-caller))
+                        success
+                        (begin
+                            ;; Mark the reward as claimed
+                            (map-set claimed-rewards
+                                {pool-id: pool-id, player: contract-caller}
+                                {claimed: true, amount: amount}
+                            )
+
+                            ;; Update pool balance
+                            (map-set pools
+                                {pool-id: pool-id}
+                                {
+                                    owner: (get owner pool-data),
+                                    entry-fee: (get entry-fee pool-data),
+                                    balance: (- (get balance pool-data) amount),
+                                    total-players: (get total-players pool-data)
+                                }
+                            )
+
+                            (ok true)
+                        )
+                        error (err ERR_TRANSFER_FAILED)
+                    )
+                )
             )
         )
-    )
+    ))
 )
 
 ;; ----------------------
