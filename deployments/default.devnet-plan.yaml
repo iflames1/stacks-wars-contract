@@ -11,7 +11,7 @@ plan:
         - contract-publish:
             contract-name: pool
             expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            cost: 79070
+            cost: 80910
             path: contracts/pool.clar
             anchor-block-only: true
             clarity-version: 2
