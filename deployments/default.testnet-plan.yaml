@@ -10,9 +10,16 @@ plan:
       transactions:
         - contract-publish:
             contract-name: pool
-            expected-sender: STS4RM23CWQR42XR3Y0770CQJ77CD5M8WEVVAWJK
-            cost: 10055
+            expected-sender: ST15FYERK7HP5TT11XR66JABRT1WX53JRHBMY1SYA
+            cost: 8101
             path: contracts/pool.clar
             anchor-block-only: true
             clarity-version: 3
-      epoch: "3.1"
+        - contract-publish:
+            contract-name: pool-1
+            expected-sender: ST15FYERK7HP5TT11XR66JABRT1WX53JRHBMY1SYA
+            cost: 10058
+            path: contracts/pool-1.clar
+            anchor-block-only: true
+            clarity-version: 3
+      epoch: "3.0"
