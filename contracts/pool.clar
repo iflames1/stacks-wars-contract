@@ -129,7 +129,7 @@
                             ;; Record player's entry into the pool
                             (map-set pool-players
                                 {pool-id: pool-id, player: tx-sender}
-                                {joined-at: block-height, amount: entry-fee}
+                                {joined-at: stacks-block-height, amount: entry-fee}
                             )
 
                             ;; Update pool data (balance and total players)
