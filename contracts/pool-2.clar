@@ -10,7 +10,7 @@
 ;; ----------------------
 
 ;; The principal that signs winner messages
-(define-constant TRUSTED_SIGNER 'STF0V8KWBS70F0WDKTMY65B3G591NN52PR4Z71Y3) ;; TODO: Replace with the actual signer before deployment
+(define-constant TRUSTED_SIGNER 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM) ;; TODO: Replace with the actual signer before deployment
 (define-constant TRUSTED_PUBLIC_KEY 0x0390a5cac7c33fda49f70bc1b0866fa0ba7a9440d9de647fecb8132ceb76a94dfa)
 
 ;; Error codes
