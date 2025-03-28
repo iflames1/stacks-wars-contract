@@ -218,7 +218,10 @@
 
 			;; Construct the message string in the format "pool-id-amount"
 			;; This must match the off-chain format: "2-5" for pool-id 2, amount 5
-			(let ((msg-hash (try! (construct-message-hash pool-id amount))))
+			(let (
+				(msg-hash (try! (construct-message-hash pool-id amount)))
+				(recipient tx-sender)  ;; Store original sender in recipient
+				)
 				;; Directly verify the signature against the trusted public key
 				(asserts! (secp256k1-verify msg-hash signature TRUSTED_PUBLIC_KEY)
 						(err ERR_INVALID_SIGNATURE))
@@ -227,7 +230,7 @@
 				(asserts! (> amount u0) (err ERR_INVALID_AMOUNT))
 
 				;; Transfer the reward from the contract to the user
-				(match (as-contract (stx-transfer? amount tx-sender tx-sender))
+				(match (as-contract (stx-transfer? amount tx-sender recipient))
 					success
 					(begin
 						;; Mark the reward as claimed
@@ -262,12 +265,6 @@
 		)
 	)
 )
-
-;;(contract-call? .pool-2 create-pool u100)
-
-;;(contract-call? .pool-2 join-pool u1)
-
-;;(contract-call? .pool claim-reward u1 u100 0xf130ba94e3ce9bc52a70f78de41dcff972fa01ac3d654470694867d291fc73e1308fe32424e0e2fee7bde4b9b81a88bdbb8463e3588c2c5e4a9edf596abe59e601)
 
 ;; ----------------------
 ;; READ-ONLY FUNCTIONS
