@@ -59,4 +59,9 @@ plan:
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/pool-1.clar
             clarity-version: 3
+        - emulated-contract-publish:
+            contract-name: pool-2
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/pool-2.clar
+            clarity-version: 3
       epoch: "3.0"
