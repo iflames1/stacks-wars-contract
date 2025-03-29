@@ -107,13 +107,6 @@
 	)
 )
 
-(define-private (end-execution)
-	(begin
-		(var-set executing false)
-		(ok true)
-	)
-)
-
 ;; ----------------------
 ;; PUBLIC FUNCTIONS
 ;; ----------------------

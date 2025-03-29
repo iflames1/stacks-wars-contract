@@ -5,6 +5,11 @@ authors = ['SWE Hashiras']
 telemetry = true
 cache_dir = './.cache'
 requirements = []
+[contracts.factory]
+path = 'contracts/factory.clar'
+clarity_version = 3
+epoch = 3.0
+
 [contracts.pool]
 path = 'contracts/pool.clar'
 clarity_version = 3

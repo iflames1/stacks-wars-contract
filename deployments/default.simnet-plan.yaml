@@ -50,6 +50,11 @@ plan:
     - id: 0
       transactions:
         - emulated-contract-publish:
+            contract-name: factory
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/factory.clar
+            clarity-version: 3
+        - emulated-contract-publish:
             contract-name: pool
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/pool.clar
@@ -63,5 +68,10 @@ plan:
             contract-name: pool-2
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/pool-2.clar
+            clarity-version: 3
+        - emulated-contract-publish:
+            contract-name: pool-3
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/pool-3.clar
             clarity-version: 3
       epoch: "3.0"
