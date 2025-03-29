@@ -2,7 +2,7 @@
 id: 0
 name: Testnet deployment
 network: testnet
-stacks-node: "https://stacks-node-api.testnet.stacks.co"
+stacks-node: "https://api.testnet.hiro.so"
 bitcoin-node: "http://blockstack:blockstacksystem@bitcoind.testnet.stacks.co:18332"
 plan:
   batches:
@@ -10,16 +10,23 @@ plan:
       transactions:
         - contract-publish:
             contract-name: pool
-            expected-sender: ST15FYERK7HP5TT11XR66JABRT1WX53JRHBMY1SYA
-            cost: 8101
+            expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            cost: 80910
             path: contracts/pool.clar
             anchor-block-only: true
             clarity-version: 3
         - contract-publish:
             contract-name: pool-1
-            expected-sender: ST15FYERK7HP5TT11XR66JABRT1WX53JRHBMY1SYA
-            cost: 10058
+            expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            cost: 103400
             path: contracts/pool-1.clar
+            anchor-block-only: true
+            clarity-version: 3
+        - contract-publish:
+            contract-name: pool-2
+            expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            cost: 92030
+            path: contracts/pool-2.clar
             anchor-block-only: true
             clarity-version: 3
       epoch: "3.0"
