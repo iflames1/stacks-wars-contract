@@ -12,6 +12,8 @@
 (define-constant TRUSTED_SIGNER 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM) ;; TODO: Replace with the actual signer before deployment
 (define-constant TRUSTED_PUBLIC_KEY 0x0390a5cac7c33fda49f70bc1b0866fa0ba7a9440d9de647fecb8132ceb76a94dfa)
 
+(define-constant DEPLOYER 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM)
+
 ;; Fixed entry fee for all players
 (define-constant ENTRY_FEE u1000)
 
@@ -25,6 +27,7 @@
 (define-constant ERR_MAXIMUM_REWARD_EXCEEDED u7)
 (define-constant ERR_REENTRANCY u8)
 (define-constant ERR_NOT_JOINED u9)
+(define-constant ERR_NOT_JOINABLE u10)
 
 ;; ----------------------
 ;; DATA VARIABLES
@@ -75,6 +78,14 @@
     (begin
         ;; Check if player has already joined
         (asserts! (not (is-some (map-get? players {player: tx-sender}))) (err ERR_ALREADY_JOINED))
+
+        ;; Allow joining only if:
+        ;; - The pool is NOT empty, OR
+        ;; - The sender IS the deployer
+        (asserts! (or
+            (not (is-eq (get-total-players) u0))
+            (is-eq tx-sender DEPLOYER))
+        (err ERR_NOT_JOINABLE))
 
         ;; Transfer STX from player to contract
         (match (stx-transfer? ENTRY_FEE tx-sender (as-contract tx-sender))
