@@ -9,13 +9,15 @@
 ;; ----------------------
 
 ;; Trusted signer for winner verification
-(define-constant TRUSTED_SIGNER 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM) ;; TODO: Replace with the actual signer before deployment
+(define-constant STACKS_WARS_FEE_WALLET 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM) ;; TODO: Replace with the actual signer before deployment
 (define-constant TRUSTED_PUBLIC_KEY 0x0390a5cac7c33fda49f70bc1b0866fa0ba7a9440d9de647fecb8132ceb76a94dfa)
 
 (define-constant DEPLOYER 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM)
 
 ;; Fixed entry fee for all players
 (define-constant ENTRY_FEE u1000)
+;; Fee percentage for the pool
+(define-constant FEE_PERCENTAGE u2)
 
 ;; Error codes
 (define-constant ERR_ALREADY_JOINED u1)
@@ -44,6 +46,9 @@
 
 ;; Track claimed rewards
 (define-map claimed-rewards {player: principal} {claimed: bool, amount: uint})
+
+;; Track collected fees to prevent double charging
+(define-map collected-fees {player: principal} {paid: bool})
 
 ;; Reentrancy guard
 (define-data-var executing bool false)
@@ -118,32 +123,56 @@
 
         ;; Construct message hash for verification
         (let (
-			(msg-hash (try! (construct-message-hash amount)))
-			(recipient tx-sender)  ;; Store original sender in recipient
-			)
-
+            (msg-hash (try! (construct-message-hash amount)))
+            (recipient tx-sender)  ;; Store original sender in recipient
+            (fee (/ (* amount FEE_PERCENTAGE) u100))
+            (net-amount (- amount fee))
+            (has-paid-fee (has-paid-entry-fee tx-sender))
+        )
             ;; Verify signature
             (asserts! (secp256k1-verify msg-hash signature TRUSTED_PUBLIC_KEY) (err ERR_INVALID_SIGNATURE))
 
-            ;; Transfer reward to player
-            (match (as-contract (stx-transfer? amount tx-sender recipient))
-                success
-                (begin
-                    ;; Mark reward as claimed
-                    (map-set claimed-rewards {player: tx-sender} {claimed: true, amount: amount})
-
-                    ;; Update pool balance
-                    (var-set pool-balance (- (var-get pool-balance) amount))
-
-                    ;; End execution (release the reentrancy guard)
-					(var-set executing false)
+            ;; handle the fee payment
+            (let ((fee-result
+                (if (not has-paid-fee)
+                    ;; Transfer fee if not already paid
+                    (match (as-contract (stx-transfer? fee tx-sender STACKS_WARS_FEE_WALLET))
+                        fee-success
+                        (begin
+                            ;; Mark fee as collected
+                            (map-set collected-fees {player: tx-sender} {paid: true})
+                            (ok true)
+                        )
+                        error (begin
+                            (var-set executing false)
+                            (err ERR_TRANSFER_FAILED)
+                        )
+                    )
                     (ok true)
-                )
-                error
-                (begin
-                    ;; End execution (release the reentrancy guard)
-					(var-set executing false)
-                    (err ERR_TRANSFER_FAILED)
+                )))
+
+                ;; Check if fee payment was successful
+                (try! fee-result)
+
+                ;; Second transfer: Send net reward to player
+                (match (as-contract (stx-transfer? net-amount tx-sender recipient))
+                    reward-success
+                    (begin
+                        ;; Mark reward as claimed
+                        (map-set claimed-rewards {player: recipient} {claimed: true, amount: amount})
+
+                        ;; Update pool balance
+                        (var-set pool-balance (- (var-get pool-balance) amount))
+
+                        ;; End execution (release the reentrancy guard)
+                        (var-set executing false)
+                        (ok true)
+                    )
+                    error
+                    (begin
+                        (var-set executing false)
+                        (err ERR_TRANSFER_FAILED)
+                    )
                 )
             )
         )
@@ -216,4 +245,10 @@
 ;; Check if a player has claimed their reward
 (define-read-only (has-claimed-reward (player principal))
     (default-to false (get claimed (map-get? claimed-rewards {player: player})))
+)
+
+
+;; Check if a player has paid the entry fee
+(define-read-only (has-paid-entry-fee (player principal))
+    (default-to false (get paid (map-get? collected-fees {player: player})))
 )
