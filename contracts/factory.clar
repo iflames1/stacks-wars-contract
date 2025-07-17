@@ -37,9 +37,6 @@
 ;; DATA VARIABLES
 ;; ----------------------
 
-;; Track total balance of the pool
-(define-data-var pool-balance uint u0)
-
 ;; Track total number of players
 (define-data-var total-players uint u0)
 
@@ -101,8 +98,7 @@
                 ;; Record player's entry
                 (map-set players {player: tx-sender} {joined-at: stacks-block-height})
 
-                ;; Update pool balance and player count
-                (var-set pool-balance (+ (var-get pool-balance) ENTRY_FEE))
+                ;; Update player count
                 (var-set total-players (+ (var-get total-players) u1))
                 (ok true)
             )
@@ -120,9 +116,6 @@
         ;; Check if reward has already been claimed
         (asserts! (not (is-some (map-get? claimed-rewards {player: tx-sender}))) (err ERR_REWARD_ALREADY_CLAIMED))
 
-        ;; Ensure the amount doesn't exceed pool balance
-        (asserts! (<= amount (var-get pool-balance)) (err ERR_MAXIMUM_REWARD_EXCEEDED))
-
         ;; Construct message hash for verification
         (let (
             (msg-hash (try! (construct-message-hash amount)))
@@ -133,6 +126,9 @@
         )
             ;; Verify signature
             (asserts! (secp256k1-verify msg-hash signature TRUSTED_PUBLIC_KEY) (err ERR_INVALID_SIGNATURE))
+
+            ;; Ensure contract has enough balance for both fee and net amount
+            (asserts! (>= (stx-get-balance (as-contract tx-sender)) amount) (err ERR_INSUFFICIENT_FUNDS))
 
             ;; handle the fee payment
             (let ((fee-result
@@ -163,9 +159,6 @@
                         ;; Mark reward as claimed
                         (map-set claimed-rewards {player: recipient} {claimed: true, amount: amount})
 
-                        ;; Update pool balance
-                        (var-set pool-balance (- (var-get pool-balance) amount))
-
                         ;; End execution (release the reentrancy guard)
                         (var-set executing false)
                         (ok true)
@@ -190,6 +183,9 @@
         ;; Ensure player has joined the pool
         (asserts! (is-some (map-get? players {player: tx-sender})) (err ERR_NOT_JOINED))
 
+        ;; Ensure contract has enough balance for refund
+        (asserts! (>= (stx-get-balance (as-contract tx-sender)) ENTRY_FEE) (err ERR_INSUFFICIENT_FUNDS))
+
         ;; Construct message hash for verification
         (let (
             (msg-hash (try! (construct-message-hash ENTRY_FEE)))
@@ -206,8 +202,7 @@
                     ;; Remove player from the pool
                     (map-delete players {player: tx-sender})
 
-                    ;; Update pool balance and player count
-                    (var-set pool-balance (- (var-get pool-balance) ENTRY_FEE))
+                    ;; Update player count
                     (var-set total-players (- (var-get total-players) u1))
 
                     ;; End execution (release the reentrancy guard)
@@ -229,9 +224,9 @@
 ;; READ-ONLY FUNCTIONS
 ;; ----------------------
 
-;; Get total pool balance
+;; Get total pool balance (actual contract balance)
 (define-read-only (get-pool-balance)
-    (var-get pool-balance)
+    (stx-get-balance (as-contract tx-sender))
 )
 
 ;; Get total number of players
@@ -248,7 +243,6 @@
 (define-read-only (has-claimed-reward (player principal))
     (default-to false (get claimed (map-get? claimed-rewards {player: player})))
 )
-
 
 ;; Check if a player has paid the entry fee
 (define-read-only (has-paid-entry-fee (player principal))
