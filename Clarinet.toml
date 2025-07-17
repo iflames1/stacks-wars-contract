@@ -1,7 +1,7 @@
 [project]
 name = 'Stacks-Wars'
 description = 'A GameFi project on the Stacks blockchain'
-authors = ['SWE Hashiras']
+authors = ['flames.stx']
 telemetry = true
 cache_dir = './.cache'
 requirements = []
@@ -10,25 +10,6 @@ path = 'contracts/factory.clar'
 clarity_version = 3
 epoch = 3.0
 
-[contracts.pool]
-path = 'contracts/pool.clar'
-clarity_version = 3
-epoch = 3.0
-
-[contracts.pool-1]
-path = 'contracts/pool-1.clar'
-clarity_version = 3
-epoch = 3.0
-
-[contracts.pool-2]
-path = 'contracts/pool-2.clar'
-clarity_version = 3
-epoch = 3.0
-
-[contracts.pool-3]
-path = 'contracts/pool-3.clar'
-clarity_version = 3
-epoch = 3.0
 [repl.analysis]
 passes = ['check_checker']
 
