@@ -16,22 +16,24 @@
 (define-constant DEPLOYER 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM)
 
 ;; Fixed entry fee for all players
-(define-constant ENTRY_FEE u1000)
+(define-constant ENTRY_FEE u5000000)
 ;; Fee percentage for the pool
 (define-constant FEE_PERCENTAGE u2)
 
+(define-constant CONTRACT (as-contract tx-sender))
+
 ;; Error codes
-(define-constant ERR_ALREADY_JOINED u1)
-(define-constant ERR_INSUFFICIENT_FUNDS u2)
-(define-constant ERR_TRANSFER_FAILED u3)
-(define-constant ERR_FEE_TRANSFER_FAILED u4)
-(define-constant ERR_REWARD_ALREADY_CLAIMED u5)
-(define-constant ERR_INVALID_SIGNATURE u6)
-(define-constant ERR_INVALID_AMOUNT u7)
-(define-constant ERR_MAXIMUM_REWARD_EXCEEDED u8)
-(define-constant ERR_REENTRANCY u9)
-(define-constant ERR_NOT_JOINED u10)
-(define-constant ERR_NOT_JOINABLE u11)
+(define-constant ERR_ALREADY_JOINED u5)
+(define-constant ERR_INSUFFICIENT_FUNDS u6)
+(define-constant ERR_TRANSFER_FAILED u7)
+(define-constant ERR_FEE_TRANSFER_FAILED u8)
+(define-constant ERR_REWARD_ALREADY_CLAIMED u9)
+(define-constant ERR_INVALID_SIGNATURE u10)
+(define-constant ERR_INVALID_AMOUNT u11)
+(define-constant ERR_MAXIMUM_REWARD_EXCEEDED u12)
+(define-constant ERR_REENTRANCY u13)
+(define-constant ERR_NOT_JOINED u14)
+(define-constant ERR_NOT_JOINABLE u15)
 
 ;; ----------------------
 ;; DATA VARIABLES
