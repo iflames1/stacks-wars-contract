@@ -1,16 +1,17 @@
 ;; ==============================
 ;; Stacks Wars - Pool Contract
 ;; ==============================
-;; A pool where players join by paying a fixed entry fee.
+;; author: flames.stx
+;; summary: A pool where players join by paying a fixed entry fee.
 ;; Winners are determined off-chain and claim rewards using signed messages.
 
 ;; ----------------------
 ;; CONSTANTS
 ;; ----------------------
 
+(define-constant STACKS_WARS_FEE_WALLET 'SP39V8Q7KATNA4B0ZKD6QNTMHDNH5VJXRBG7PB8G2)
 ;; Trusted signer for winner verification
-(define-constant STACKS_WARS_FEE_WALLET 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM) ;; TODO: Replace with the actual signer before deployment
-(define-constant TRUSTED_PUBLIC_KEY 0x0390a5cac7c33fda49f70bc1b0866fa0ba7a9440d9de647fecb8132ceb76a94dfa)
+(define-constant TRUSTED_PUBLIC_KEY 0x03ffe7c30724197e226ddc09b6340c078e7f42e3751c3d0654d067798850d22d09)
 
 (define-constant DEPLOYER 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM)
 
@@ -23,13 +24,14 @@
 (define-constant ERR_ALREADY_JOINED u1)
 (define-constant ERR_INSUFFICIENT_FUNDS u2)
 (define-constant ERR_TRANSFER_FAILED u3)
-(define-constant ERR_REWARD_ALREADY_CLAIMED u4)
-(define-constant ERR_INVALID_SIGNATURE u5)
-(define-constant ERR_INVALID_AMOUNT u6)
-(define-constant ERR_MAXIMUM_REWARD_EXCEEDED u7)
-(define-constant ERR_REENTRANCY u8)
-(define-constant ERR_NOT_JOINED u9)
-(define-constant ERR_NOT_JOINABLE u10)
+(define-constant ERR_FEE_TRANSFER_FAILED u4)
+(define-constant ERR_REWARD_ALREADY_CLAIMED u5)
+(define-constant ERR_INVALID_SIGNATURE u6)
+(define-constant ERR_INVALID_AMOUNT u7)
+(define-constant ERR_MAXIMUM_REWARD_EXCEEDED u8)
+(define-constant ERR_REENTRANCY u9)
+(define-constant ERR_NOT_JOINED u10)
+(define-constant ERR_NOT_JOINABLE u11)
 
 ;; ----------------------
 ;; DATA VARIABLES
@@ -145,7 +147,7 @@
                         )
                         error (begin
                             (var-set executing false)
-                            (err ERR_TRANSFER_FAILED)
+                            (err ERR_FEE_TRANSFER_FAILED)
                         )
                     )
                     (ok true)
