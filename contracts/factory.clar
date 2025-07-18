@@ -1,42 +1,41 @@
 ;; ==============================
 ;; Stacks Wars - Pool Contract
 ;; ==============================
-;; A pool where players join by paying a fixed entry fee.
+;; author: flames.stx
+;; summary: A pool where players join by paying a fixed entry fee.
 ;; Winners are determined off-chain and claim rewards using signed messages.
 
 ;; ----------------------
 ;; CONSTANTS
 ;; ----------------------
 
+(define-constant STACKS_WARS_FEE_WALLET 'SP39V8Q7KATNA4B0ZKD6QNTMHDNH5VJXRBG7PB8G2)
 ;; Trusted signer for winner verification
-(define-constant STACKS_WARS_FEE_WALLET 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM) ;; TODO: Replace with the actual signer before deployment
-(define-constant TRUSTED_PUBLIC_KEY 0x0390a5cac7c33fda49f70bc1b0866fa0ba7a9440d9de647fecb8132ceb76a94dfa)
+(define-constant TRUSTED_PUBLIC_KEY 0x03ffe7c30724197e226ddc09b6340c078e7f42e3751c3d0654d067798850d22d09)
 
 (define-constant DEPLOYER 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM)
 
 ;; Fixed entry fee for all players
-(define-constant ENTRY_FEE u1000)
+(define-constant ENTRY_FEE u5000000)
 ;; Fee percentage for the pool
 (define-constant FEE_PERCENTAGE u2)
 
 ;; Error codes
-(define-constant ERR_ALREADY_JOINED u1)
-(define-constant ERR_INSUFFICIENT_FUNDS u2)
-(define-constant ERR_TRANSFER_FAILED u3)
-(define-constant ERR_REWARD_ALREADY_CLAIMED u4)
-(define-constant ERR_INVALID_SIGNATURE u5)
-(define-constant ERR_INVALID_AMOUNT u6)
-(define-constant ERR_MAXIMUM_REWARD_EXCEEDED u7)
-(define-constant ERR_REENTRANCY u8)
-(define-constant ERR_NOT_JOINED u9)
-(define-constant ERR_NOT_JOINABLE u10)
+(define-constant ERR_ALREADY_JOINED u5)
+(define-constant ERR_INSUFFICIENT_FUNDS u6)
+(define-constant ERR_TRANSFER_FAILED u7)
+(define-constant ERR_FEE_TRANSFER_FAILED u8)
+(define-constant ERR_REWARD_ALREADY_CLAIMED u9)
+(define-constant ERR_INVALID_SIGNATURE u10)
+(define-constant ERR_INVALID_AMOUNT u11)
+(define-constant ERR_MAXIMUM_REWARD_EXCEEDED u12)
+(define-constant ERR_REENTRANCY u13)
+(define-constant ERR_NOT_JOINED u14)
+(define-constant ERR_NOT_JOINABLE u15)
 
 ;; ----------------------
 ;; DATA VARIABLES
 ;; ----------------------
-
-;; Track total balance of the pool
-(define-data-var pool-balance uint u0)
 
 ;; Track total number of players
 (define-data-var total-players uint u0)
@@ -99,8 +98,7 @@
                 ;; Record player's entry
                 (map-set players {player: tx-sender} {joined-at: stacks-block-height})
 
-                ;; Update pool balance and player count
-                (var-set pool-balance (+ (var-get pool-balance) ENTRY_FEE))
+                ;; Update player count
                 (var-set total-players (+ (var-get total-players) u1))
                 (ok true)
             )
@@ -118,9 +116,6 @@
         ;; Check if reward has already been claimed
         (asserts! (not (is-some (map-get? claimed-rewards {player: tx-sender}))) (err ERR_REWARD_ALREADY_CLAIMED))
 
-        ;; Ensure the amount doesn't exceed pool balance
-        (asserts! (<= amount (var-get pool-balance)) (err ERR_MAXIMUM_REWARD_EXCEEDED))
-
         ;; Construct message hash for verification
         (let (
             (msg-hash (try! (construct-message-hash amount)))
@@ -131,6 +126,9 @@
         )
             ;; Verify signature
             (asserts! (secp256k1-verify msg-hash signature TRUSTED_PUBLIC_KEY) (err ERR_INVALID_SIGNATURE))
+
+            ;; Ensure contract has enough balance for both fee and net amount
+            (asserts! (>= (stx-get-balance (as-contract tx-sender)) amount) (err ERR_INSUFFICIENT_FUNDS))
 
             ;; handle the fee payment
             (let ((fee-result
@@ -145,7 +143,7 @@
                         )
                         error (begin
                             (var-set executing false)
-                            (err ERR_TRANSFER_FAILED)
+                            (err ERR_FEE_TRANSFER_FAILED)
                         )
                     )
                     (ok true)
@@ -160,9 +158,6 @@
                     (begin
                         ;; Mark reward as claimed
                         (map-set claimed-rewards {player: recipient} {claimed: true, amount: amount})
-
-                        ;; Update pool balance
-                        (var-set pool-balance (- (var-get pool-balance) amount))
 
                         ;; End execution (release the reentrancy guard)
                         (var-set executing false)
@@ -188,6 +183,9 @@
         ;; Ensure player has joined the pool
         (asserts! (is-some (map-get? players {player: tx-sender})) (err ERR_NOT_JOINED))
 
+        ;; Ensure contract has enough balance for refund
+        (asserts! (>= (stx-get-balance (as-contract tx-sender)) ENTRY_FEE) (err ERR_INSUFFICIENT_FUNDS))
+
         ;; Construct message hash for verification
         (let (
             (msg-hash (try! (construct-message-hash ENTRY_FEE)))
@@ -204,8 +202,7 @@
                     ;; Remove player from the pool
                     (map-delete players {player: tx-sender})
 
-                    ;; Update pool balance and player count
-                    (var-set pool-balance (- (var-get pool-balance) ENTRY_FEE))
+                    ;; Update player count
                     (var-set total-players (- (var-get total-players) u1))
 
                     ;; End execution (release the reentrancy guard)
@@ -227,9 +224,9 @@
 ;; READ-ONLY FUNCTIONS
 ;; ----------------------
 
-;; Get total pool balance
+;; Get total pool balance (actual contract balance)
 (define-read-only (get-pool-balance)
-    (var-get pool-balance)
+    (stx-get-balance (as-contract tx-sender))
 )
 
 ;; Get total number of players
@@ -246,7 +243,6 @@
 (define-read-only (has-claimed-reward (player principal))
     (default-to false (get claimed (map-get? claimed-rewards {player: player})))
 )
-
 
 ;; Check if a player has paid the entry fee
 (define-read-only (has-paid-entry-fee (player principal))
