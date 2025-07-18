@@ -20,8 +20,6 @@
 ;; Fee percentage for the pool
 (define-constant FEE_PERCENTAGE u2)
 
-(define-constant CONTRACT (as-contract tx-sender))
-
 ;; Error codes
 (define-constant ERR_ALREADY_JOINED u5)
 (define-constant ERR_INSUFFICIENT_FUNDS u6)
