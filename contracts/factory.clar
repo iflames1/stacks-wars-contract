@@ -65,7 +65,11 @@
 )
 
 (define-private (construct-message-hash (amount uint))
-    (let ((message {amount: amount, winner: tx-sender}))
+    (let ((message {
+        amount: amount,
+        winner: tx-sender,
+        contract: (as-contract tx-sender)
+        }))
         (match (to-consensus-buff? message)
             buff (ok (sha256 buff))
             (err ERR_INVALID_AMOUNT)
