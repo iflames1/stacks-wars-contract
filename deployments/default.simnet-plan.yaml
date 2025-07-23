@@ -50,6 +50,14 @@ plan:
     - id: 0
       transactions:
         - emulated-contract-publish:
+            contract-name: verifying-signatures
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/verifying-signatures.clar
+            clarity-version: 2
+      epoch: "2.5"
+    - id: 1
+      transactions:
+        - emulated-contract-publish:
             contract-name: factory
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/factory.clar

@@ -10,6 +10,10 @@ path = 'contracts/factory.clar'
 clarity_version = 3
 epoch = 3.0
 
+[contracts.verifying-signatures]
+path = 'contracts/verifying-signatures.clar'
+clarity_version = 2
+epoch = 2.5
 [repl.analysis]
 passes = ['check_checker']
 
