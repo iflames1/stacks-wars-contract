@@ -1,15 +1,16 @@
 ;; ==============================
 ;; Stacks Wars - Pool Contract
 ;; ==============================
-;; A pool where players join by paying a fixed entry fee.
+;; author: flames.stx
+;; summary: A pool where players join by paying a fixed entry fee.
 ;; Winners are determined off-chain and claim rewards using signed messages.
 
 ;; ----------------------
 ;; CONSTANTS
 ;; ----------------------
 
-;; Trusted signer for winner verification
 (define-constant STACKS_WARS_FEE_WALLET 'ST39V8Q7KATNA4B0ZKD6QNTMHDNH5VJXRBHK9XV4F)
+;; Trusted signer for winner verification
 (define-constant TRUSTED_PUBLIC_KEY 0x03ffe7c30724197e226ddc09b6340c078e7f42e3751c3d0654d067798850d22d09)
 
 (define-constant DEPLOYER 'STF0V8KWBS70F0WDKTMY65B3G591NN52PR4Z71Y3)
@@ -20,16 +21,17 @@
 (define-constant FEE_PERCENTAGE u2)
 
 ;; Error codes
-(define-constant ERR_ALREADY_JOINED u1)
-(define-constant ERR_INSUFFICIENT_FUNDS u2)
-(define-constant ERR_TRANSFER_FAILED u3)
-(define-constant ERR_REWARD_ALREADY_CLAIMED u4)
-(define-constant ERR_INVALID_SIGNATURE u5)
-(define-constant ERR_INVALID_AMOUNT u6)
-(define-constant ERR_MAXIMUM_REWARD_EXCEEDED u7)
-(define-constant ERR_REENTRANCY u8)
-(define-constant ERR_NOT_JOINED u9)
-(define-constant ERR_NOT_JOINABLE u10)
+(define-constant ERR_ALREADY_JOINED u5)
+(define-constant ERR_INSUFFICIENT_FUNDS u6)
+(define-constant ERR_TRANSFER_FAILED u7)
+(define-constant ERR_FEE_TRANSFER_FAILED u8)
+(define-constant ERR_REWARD_ALREADY_CLAIMED u9)
+(define-constant ERR_INVALID_SIGNATURE u10)
+(define-constant ERR_INVALID_AMOUNT u11)
+(define-constant ERR_MAXIMUM_REWARD_EXCEEDED u12)
+(define-constant ERR_REENTRANCY u13)
+(define-constant ERR_NOT_JOINED u14)
+(define-constant ERR_NOT_JOINABLE u15)
 
 ;; ----------------------
 ;; DATA VARIABLES
