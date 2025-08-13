@@ -50,28 +50,16 @@ plan:
     - id: 0
       transactions:
         - emulated-contract-publish:
+            contract-name: verifying-signatures
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/verifying-signatures.clar
+            clarity-version: 2
+      epoch: "2.5"
+    - id: 1
+      transactions:
+        - emulated-contract-publish:
             contract-name: factory
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/factory.clar
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: pool
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/pool.clar
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: pool-1
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/pool-1.clar
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: pool-2
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/pool-2.clar
-            clarity-version: 3
-        - emulated-contract-publish:
-            contract-name: pool-3
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/pool-3.clar
             clarity-version: 3
       epoch: "3.0"

@@ -1,7 +1,7 @@
 [project]
 name = 'Stacks-Wars'
 description = 'A GameFi project on the Stacks blockchain'
-authors = ['SWE Hashiras']
+authors = ['flames.stx']
 telemetry = true
 cache_dir = './.cache'
 requirements = []
