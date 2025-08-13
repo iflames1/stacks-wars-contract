@@ -50,20 +50,10 @@
 ;; Track collected fees to prevent double charging
 (define-map collected-fees {player: principal} {paid: bool})
 
-;; Reentrancy guard
-(define-data-var executing bool false)
-
 ;; ----------------------
 ;; HELPER FUNCTIONS
 ;; ----------------------
 
-(define-private (begin-execution)
-    (begin
-        (asserts! (not (var-get executing)) (err ERR_REENTRANCY))
-        (var-set executing true)
-        (ok true)
-    )
-)
 
 (define-private (construct-message-hash (amount uint))
     (let ((message {
@@ -115,9 +105,6 @@
 ;; Winners claim rewards using signed messages
 (define-public (claim-reward (amount uint) (signature (buff 65)))
     (begin
-        ;; Apply reentrancy guard
-        (try! (begin-execution))
-
         ;; Check if reward has already been claimed
         (asserts! (not (is-some (map-get? claimed-rewards {player: tx-sender}))) (err ERR_REWARD_ALREADY_CLAIMED))
 
@@ -147,7 +134,6 @@
                             (ok true)
                         )
                         error (begin
-                            (var-set executing false)
                             (err ERR_FEE_TRANSFER_FAILED)
                         )
                     )
@@ -165,12 +151,10 @@
                         (map-set claimed-rewards {player: recipient} {claimed: true, amount: amount})
 
                         ;; End execution (release the reentrancy guard)
-                        (var-set executing false)
                         (ok true)
                     )
                     error
                     (begin
-                        (var-set executing false)
                         (err ERR_TRANSFER_FAILED)
                     )
                 )
@@ -182,8 +166,6 @@
 ;; Players leave the pool and get refunded with a verified signature
 (define-public (leave-pool (signature (buff 65)))
     (begin
-        ;; Apply reentrancy guard
-        (try! (begin-execution))
 
         ;; Ensure player has joined the pool
         (asserts! (is-some (map-get? players {player: tx-sender})) (err ERR_NOT_JOINED))
@@ -210,14 +192,10 @@
                     ;; Update player count
                     (var-set total-players (- (var-get total-players) u1))
 
-                    ;; End execution (release the reentrancy guard)
-                    (var-set executing false)
                     (ok true)
                 )
                 error
                 (begin
-                    ;; End execution (release the reentrancy guard)
-                    (var-set executing false)
                     (err ERR_TRANSFER_FAILED)
                 )
             )
