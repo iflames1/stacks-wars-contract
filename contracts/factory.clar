@@ -9,13 +9,13 @@
 ;; ----------------------
 
 ;; Trusted signer for winner verification
-(define-constant STACKS_WARS_FEE_WALLET 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM) ;; TODO: Replace with the actual signer before deployment
-(define-constant TRUSTED_PUBLIC_KEY 0x0390a5cac7c33fda49f70bc1b0866fa0ba7a9440d9de647fecb8132ceb76a94dfa)
+(define-constant STACKS_WARS_FEE_WALLET 'ST39V8Q7KATNA4B0ZKD6QNTMHDNH5VJXRBHK9XV4F)
+(define-constant TRUSTED_PUBLIC_KEY 0x03ffe7c30724197e226ddc09b6340c078e7f42e3751c3d0654d067798850d22d09)
 
-(define-constant DEPLOYER 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM)
+(define-constant DEPLOYER 'STF0V8KWBS70F0WDKTMY65B3G591NN52PR4Z71Y3)
 
 ;; Fixed entry fee for all players
-(define-constant ENTRY_FEE u1000)
+(define-constant ENTRY_FEE u5000000)
 ;; Fee percentage for the pool
 (define-constant FEE_PERCENTAGE u2)
 

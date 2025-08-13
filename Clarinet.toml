@@ -10,25 +10,10 @@ path = 'contracts/factory.clar'
 clarity_version = 3
 epoch = 3.0
 
-[contracts.pool]
-path = 'contracts/pool.clar'
-clarity_version = 3
-epoch = 3.0
-
-[contracts.pool-1]
-path = 'contracts/pool-1.clar'
-clarity_version = 3
-epoch = 3.0
-
-[contracts.pool-2]
-path = 'contracts/pool-2.clar'
-clarity_version = 3
-epoch = 3.0
-
-[contracts.pool-3]
-path = 'contracts/pool-3.clar'
-clarity_version = 3
-epoch = 3.0
+[contracts.sponsored-pool]
+path = 'contracts/sponsored-pool.clar'
+clarity_version = 2
+epoch = 2.5
 [repl.analysis]
 passes = ['check_checker']
 
