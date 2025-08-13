@@ -1,3 +1,4 @@
+
 ;; ==============================
 ;; Stacks Wars - Pool Contract
 ;; ==============================
@@ -13,7 +14,7 @@
 ;; Trusted signer for winner verification
 (define-constant TRUSTED_PUBLIC_KEY 0x03ffe7c30724197e226ddc09b6340c078e7f42e3751c3d0654d067798850d22d09)
 
-(define-constant DEPLOYER 'STF0V8KWBS70F0WDKTMY65B3G591NN52PR4Z71Y3)
+(define-constant DEPLOYER 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM)
 
 ;; Fixed entry fee for all players
 (define-constant ENTRY_FEE u5000000)
