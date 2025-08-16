@@ -1,24 +1,17 @@
-
 ;; ==============================
-;; Stacks Wars - Pool Contract
+;; Stacks Wars - Sponsored Pool Contract
 ;; ==============================
 ;; author: flames.stx
-;; summary: A pool where players join by paying a fixed entry fee.
-;; Winners are determined off-chain and claim rewards using signed messages.
+;; summary: Modified version where deployer's join/leave handles pool funding
 
 ;; ----------------------
 ;; CONSTANTS
 ;; ----------------------
 
 (define-constant STACKS_WARS_FEE_WALLET 'SP39V8Q7KATNA4B0ZKD6QNTMHDNH5VJXRBG7PB8G2)
-;; Trusted signer for winner verification
 (define-constant TRUSTED_PUBLIC_KEY 0x03ffe7c30724197e226ddc09b6340c078e7f42e3751c3d0654d067798850d22d09)
-
 (define-constant DEPLOYER 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM)
-
-;; Fixed entry fee for all players
-(define-constant ENTRY_FEE u5000000)
-;; Fee percentage for the pool
+(define-constant POOL_SIZE u50000000)
 (define-constant FEE_PERCENTAGE u2)
 
 ;; Error codes
@@ -29,31 +22,24 @@
 (define-constant ERR_REWARD_ALREADY_CLAIMED u9)
 (define-constant ERR_INVALID_SIGNATURE u10)
 (define-constant ERR_INVALID_AMOUNT u11)
-(define-constant ERR_MAXIMUM_REWARD_EXCEEDED u12)
 (define-constant ERR_REENTRANCY u13)
 (define-constant ERR_NOT_JOINED u14)
-(define-constant ERR_NOT_JOINABLE u15)
+(define-constant ERR_NOT_SPONSORED u15)
+(define-constant ERR_POOL_NOT_EMPTY u16)
 
 ;; ----------------------
 ;; DATA VARIABLES
 ;; ----------------------
 
-;; Track total number of players
 (define-data-var total-players uint u0)
-
-;; Track players who joined the pool
-(define-map players {player: principal} {joined-at: uint})
-
-;; Track claimed rewards
+(define-data-var pool-funded bool false)
+(define-map players {player: principal} {joined-at: uint, is-sponsor: bool})
 (define-map claimed-rewards {player: principal} {claimed: bool, amount: uint})
-
-;; Track collected fees to prevent double charging
 (define-map collected-fees {player: principal} {paid: bool})
 
 ;; ----------------------
 ;; HELPER FUNCTIONS
 ;; ----------------------
-
 
 (define-private (construct-message-hash (amount uint))
     (let ((message {
@@ -72,57 +58,92 @@
 ;; PUBLIC FUNCTIONS
 ;; ----------------------
 
-;; Players join the shared pool by paying the fixed entry fee
 (define-public (join-pool)
     (begin
         ;; Check if player has already joined
         (asserts! (not (is-some (map-get? players {player: tx-sender}))) (err ERR_ALREADY_JOINED))
 
-        ;; Allow joining only if:
-        ;; - The pool is NOT empty, OR
-        ;; - The sender IS the deployer
-        (asserts! (or
-            (not (is-eq (get-total-players) u0))
-            (is-eq tx-sender DEPLOYER))
-        (err ERR_NOT_JOINABLE))
-
-        ;; Transfer STX from player to contract
-        (match (stx-transfer? ENTRY_FEE tx-sender (as-contract tx-sender))
-            success
+        (if (is-eq tx-sender DEPLOYER)
+            ;; Deployer joining funds the pool
             (begin
-                ;; Record player's entry
-                (map-set players {player: tx-sender} {joined-at: stacks-block-height})
+                ;; Ensure pool isn't already funded
+                (asserts! (not (var-get pool-funded)) (err ERR_ALREADY_JOINED))
 
-                ;; Update player count
+                ;; Transfer pool size from deployer to contract
+                (match (stx-transfer? POOL_SIZE tx-sender (as-contract tx-sender))
+                    success
+                    (begin
+                        (map-set players {player: tx-sender} {joined-at: stacks-block-height, is-sponsor: true})
+                        (var-set total-players (+ (var-get total-players) u1))
+                        (var-set pool-funded true)
+                        (ok true)
+                    )
+                    error (err ERR_TRANSFER_FAILED)
+                )
+            )
+            ;; Regular player joining
+            (begin
+                ;; Ensure pool is funded
+                (asserts! (var-get pool-funded) (err ERR_NOT_SPONSORED))
+
+                (map-set players {player: tx-sender} {joined-at: stacks-block-height, is-sponsor: false})
                 (var-set total-players (+ (var-get total-players) u1))
                 (ok true)
             )
-            error (err ERR_TRANSFER_FAILED)
         )
     )
 )
 
-;; Winners claim rewards using signed messages
+(define-public (leave-pool)
+    (begin
+        ;; Ensure player has joined
+        (let ((player-data (unwrap! (map-get? players {player: tx-sender}) (err ERR_NOT_JOINED))))
+            (if (get is-sponsor player-data)
+                ;; Sponsor leaving - withdraw balance
+                (begin
+                    ;; Ensure no other players are still in the pool
+                    (asserts! (is-eq (var-get total-players) u1) (err ERR_POOL_NOT_EMPTY))
+
+                    (let ((balance (stx-get-balance (as-contract tx-sender))))
+                        (match (as-contract (stx-transfer? balance tx-sender DEPLOYER))
+                            success
+                            (begin
+                                (map-delete players {player: tx-sender})
+                                (var-set total-players (- (var-get total-players) u1))
+                                (var-set pool-funded false)
+                                (ok true)
+                            )
+                            error (err ERR_TRANSFER_FAILED)
+                        )
+                    )
+                )
+                ;; Regular player leaving
+                (begin
+                    (map-delete players {player: tx-sender})
+                    (var-set total-players (- (var-get total-players) u1))
+                    (ok true)
+                )
+            )
+        )
+    )
+)
+
 (define-public (claim-reward (amount uint) (signature (buff 65)))
     (begin
-        ;; Check if reward has already been claimed
+        (asserts! (is-some (map-get? players {player: tx-sender})) (err ERR_NOT_JOINED))
         (asserts! (not (is-some (map-get? claimed-rewards {player: tx-sender}))) (err ERR_REWARD_ALREADY_CLAIMED))
 
-        ;; Construct message hash for verification
         (let (
             (msg-hash (try! (construct-message-hash amount)))
-            (recipient tx-sender)  ;; Store original sender in recipient
+            (recipient tx-sender)
             (fee (/ (* amount FEE_PERCENTAGE) u100))
             (net-amount (- amount fee))
-            (has-paid-fee (has-paid-entry-fee tx-sender))
+            (has-paid-fee (has-paid-entry-fee tx-sender))  ;; Check if fee already paid
         )
-            ;; Verify signature
             (asserts! (secp256k1-verify msg-hash signature TRUSTED_PUBLIC_KEY) (err ERR_INVALID_SIGNATURE))
-
-            ;; Ensure contract has enough balance for both fee and net amount
             (asserts! (>= (stx-get-balance (as-contract tx-sender)) amount) (err ERR_INSUFFICIENT_FUNDS))
 
-            ;; handle the fee payment
+            ;; Handle the fee payment conditionally
             (let ((fee-result
                 (if (not has-paid-fee)
                     ;; Transfer fee if not already paid
@@ -133,11 +154,11 @@
                             (map-set collected-fees {player: tx-sender} {paid: true})
                             (ok true)
                         )
-                        error (begin
+                        fee-error (begin
                             (err ERR_FEE_TRANSFER_FAILED)
                         )
                     )
-                    (ok true)
+                    (ok true)  ;; Skip fee if already paid
                 )))
 
                 ;; Check if fee payment was successful
@@ -147,56 +168,13 @@
                 (match (as-contract (stx-transfer? net-amount tx-sender recipient))
                     reward-success
                     (begin
-                        ;; Mark reward as claimed
                         (map-set claimed-rewards {player: recipient} {claimed: true, amount: amount})
-
-                        ;; End execution (release the reentrancy guard)
                         (ok true)
                     )
-                    error
+                    reward-error
                     (begin
                         (err ERR_TRANSFER_FAILED)
                     )
-                )
-            )
-        )
-    )
-)
-
-;; Players leave the pool and get refunded with a verified signature
-(define-public (leave-pool (signature (buff 65)))
-    (begin
-
-        ;; Ensure player has joined the pool
-        (asserts! (is-some (map-get? players {player: tx-sender})) (err ERR_NOT_JOINED))
-
-        ;; Ensure contract has enough balance for refund
-        (asserts! (>= (stx-get-balance (as-contract tx-sender)) ENTRY_FEE) (err ERR_INSUFFICIENT_FUNDS))
-
-        ;; Construct message hash for verification
-        (let (
-            (msg-hash (try! (construct-message-hash ENTRY_FEE)))
-            (recipient tx-sender)  ;; Store original sender in recipient
-            )
-
-            ;; Verify signature
-            (asserts! (secp256k1-verify msg-hash signature TRUSTED_PUBLIC_KEY) (err ERR_INVALID_SIGNATURE))
-
-            ;; Transfer refund to player
-            (match (as-contract (stx-transfer? ENTRY_FEE tx-sender recipient))
-                success
-                (begin
-                    ;; Remove player from the pool
-                    (map-delete players {player: tx-sender})
-
-                    ;; Update player count
-                    (var-set total-players (- (var-get total-players) u1))
-
-                    (ok true)
-                )
-                error
-                (begin
-                    (err ERR_TRANSFER_FAILED)
                 )
             )
         )
@@ -207,27 +185,26 @@
 ;; READ-ONLY FUNCTIONS
 ;; ----------------------
 
-;; Get total pool balance (actual contract balance)
 (define-read-only (get-pool-balance)
     (stx-get-balance (as-contract tx-sender))
 )
 
-;; Get total number of players
 (define-read-only (get-total-players)
     (var-get total-players)
 )
 
-;; Check if a player has joined
 (define-read-only (has-player-joined (player principal))
     (is-some (map-get? players {player: player}))
 )
 
-;; Check if a player has claimed their reward
+(define-read-only (is-pool-sponsored)
+    (var-get pool-funded)
+)
+
 (define-read-only (has-claimed-reward (player principal))
     (default-to false (get claimed (map-get? claimed-rewards {player: player})))
 )
 
-;; Check if a player has paid the entry fee
 (define-read-only (has-paid-entry-fee (player principal))
     (default-to false (get paid (map-get? collected-fees {player: player})))
 )
