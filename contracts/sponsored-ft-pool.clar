@@ -2,24 +2,40 @@
 ;; Stacks Wars - Token Pool Contract
 ;; ==============================
 ;; author: flames.stx
-;; summary: Sponsored pool using fungible tokens instead of STX
+;; summary: Sponsored pool using external fungible tokens
 
 ;; ----------------------
 ;; TOKEN CONFIGURATION
 ;; ----------------------
 
-;; Token contract details
-(define-constant TOKEN_CONTRACT 'SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE.token-contract)
-(define-constant TOKEN_NAME "pool-token")
+;; These will be set during deployment by the deployer
+(define-constant TOKEN_CONTRACT .test-token)
+(define-constant TOKEN_NAME "test-token")
+
+;; ----------------------
+;; TRAIT DEFINITION
+;; ----------------------
+
+(define-trait sip-010-trait
+    (
+        (transfer (uint principal principal (optional (buff 34))) (response bool uint))
+        (get-balance (principal) (response uint uint))
+        (get-total-supply () (response uint uint))
+        (get-name () (response (string-ascii 32) uint))
+        (get-symbol () (response (string-ascii 32) uint))
+        (get-decimals () (response uint uint))
+        (get-token-uri () (response (optional (string-ascii 256)) uint))
+    )
+)
 
 ;; ----------------------
 ;; CONSTANTS
 ;; ----------------------
 
-(define-constant FEE_WALLET 'SP39V8Q7KATNA4B0ZKD6QNTMHDNH5VJXRBG7PB8G2)
+(define-constant STACKS_WARS_FEE_WALLET 'SP39V8Q7KATNA4B0ZKD6QNTMHDNH5VJXRBG7PB8G2)
 (define-constant TRUSTED_PUBLIC_KEY 0x03ffe7c30724197e226ddc09b6340c078e7f42e3751c3d0654d067798850d22d09)
 (define-constant DEPLOYER 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM)
-(define-constant POOL_SIZE u5000000) ;; Pool funding amount in tokens
+(define-constant POOL_SIZE u5000000)
 (define-constant FEE_PERCENTAGE u2)
 
 ;; Error codes
@@ -78,7 +94,7 @@
                 (asserts! (not (var-get pool-funded)) (err ERR_ALREADY_JOINED))
 
                 ;; Transfer tokens from deployer to contract
-                (match (ft-transfer? TOKEN_NAME POOL_SIZE tx-sender (as-contract tx-sender))
+                (match (contract-call? .test-token transfer POOL_SIZE tx-sender (as-contract tx-sender) none)
                     success
                     (begin
                         (map-set players {player: tx-sender} {joined-at: stacks-block-height, is-sponsor: true})
@@ -112,8 +128,8 @@
                     ;; Ensure no other players are still in the pool
                     (asserts! (is-eq (var-get total-players) u1) (err ERR_POOL_NOT_EMPTY))
 
-                    (let ((balance (ft-get-balance TOKEN_NAME (as-contract tx-sender))))
-                        (match (as-contract (ft-transfer? TOKEN_NAME balance tx-sender DEPLOYER))
+                    (let ((balance (unwrap-panic (contract-call? .test-token get-balance (as-contract tx-sender)))))
+                        (match (as-contract (contract-call? .test-token transfer balance tx-sender DEPLOYER none))
                             success
                             (begin
                                 (map-delete players {player: tx-sender})
@@ -147,28 +163,32 @@
             (fee (/ (* amount FEE_PERCENTAGE) u100))
             (net-amount (- amount fee))
             (has-paid-fee (has-paid-entry-fee tx-sender))
+            (current-balance (unwrap-panic (contract-call? .test-token get-balance (as-contract tx-sender))))
         )
             (asserts! (secp256k1-verify msg-hash signature TRUSTED_PUBLIC_KEY) (err ERR_INVALID_SIGNATURE))
-            (asserts! (>= (ft-get-balance TOKEN_NAME (as-contract tx-sender)) amount) (err ERR_INSUFFICIENT_FUNDS))
+            (asserts! (>= current-balance amount) (err ERR_INSUFFICIENT_FUNDS))
 
-            ;; Handle fee payment
+            ;; Handle the fee payment conditionally
             (let ((fee-result
                 (if (not has-paid-fee)
-                    (match (as-contract (ft-transfer? TOKEN_NAME fee tx-sender FEE_WALLET))
+                    ;; Transfer fee if not already paid
+                    (match (as-contract (contract-call? .test-token transfer fee tx-sender STACKS_WARS_FEE_WALLET none))
                         fee-success
                         (begin
+                            ;; Mark fee as collected
                             (map-set collected-fees {player: tx-sender} {paid: true})
                             (ok true)
                         )
                         fee-error (err ERR_FEE_TRANSFER_FAILED)
                     )
-                    (ok true)
+                    (ok true)  ;; Skip fee if already paid
                 )))
 
+                ;; Check if fee payment was successful
                 (try! fee-result)
 
                 ;; Transfer reward to player
-                (match (as-contract (ft-transfer? TOKEN_NAME net-amount tx-sender recipient))
+                (match (as-contract (contract-call? .test-token transfer net-amount tx-sender recipient none))
                     reward-success
                     (begin
                         (map-set claimed-rewards {player: recipient} {claimed: true, amount: amount})
@@ -184,10 +204,6 @@
 ;; ----------------------
 ;; READ-ONLY FUNCTIONS
 ;; ----------------------
-
-(define-read-only (get-pool-balance)
-    (ft-get-balance TOKEN_NAME (as-contract tx-sender))
-)
 
 (define-read-only (get-total-players)
     (var-get total-players)
@@ -207,4 +223,17 @@
 
 (define-read-only (has-paid-entry-fee (player principal))
     (default-to false (get paid (map-get? collected-fees {player: player})))
+)
+
+(define-read-only (get-token-contract)
+    TOKEN_CONTRACT
+)
+
+;; ----------------------
+;; PUBLIC QUERY FUNCTIONS
+;; ----------------------
+
+;; Get pool balance
+(define-public (get-pool-balance)
+    (contract-call? .test-token get-balance (as-contract tx-sender))
 )
