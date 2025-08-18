@@ -9,7 +9,6 @@
 ;; ----------------------
 
 ;; These will be set during deployment by the deployer
-(define-constant TOKEN_CONTRACT .test-token)
 (define-constant TOKEN_NAME "test-token")
 
 ;; ----------------------
@@ -226,7 +225,7 @@
 )
 
 (define-read-only (get-token-contract)
-    TOKEN_CONTRACT
+    .test-token
 )
 
 ;; ----------------------
