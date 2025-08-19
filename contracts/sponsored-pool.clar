@@ -97,7 +97,7 @@
     )
 )
 
-(define-public (leave-pool)
+(define-public (leave-pool (signature (buff 65)))
     (begin
         ;; Ensure player has joined
         (let ((player-data (unwrap! (map-get? players {player: tx-sender}) (err ERR_NOT_JOINED))))
@@ -107,7 +107,12 @@
                     ;; Ensure no other players are still in the pool
                     (asserts! (is-eq (var-get total-players) u1) (err ERR_POOL_NOT_EMPTY))
 
-                    (let ((balance (stx-get-balance (as-contract tx-sender))))
+                    ;; Verify signature for pool size amount
+                    (let (
+                        (msg-hash (try! (construct-message-hash POOL_SIZE)))
+                        (balance (stx-get-balance (as-contract tx-sender)))
+                    )
+                        (asserts! (secp256k1-verify msg-hash signature TRUSTED_PUBLIC_KEY) (err ERR_INVALID_SIGNATURE))
                         (match (as-contract (stx-transfer? balance tx-sender DEPLOYER))
                             success
                             (begin
@@ -122,9 +127,14 @@
                 )
                 ;; Regular player leaving
                 (begin
-                    (map-delete players {player: tx-sender})
-                    (var-set total-players (- (var-get total-players) u1))
-                    (ok true)
+                    ;; Verify signature for amount 0
+                    (let ((msg-hash (try! (construct-message-hash u0))))
+                        (asserts! (secp256k1-verify msg-hash signature TRUSTED_PUBLIC_KEY) (err ERR_INVALID_SIGNATURE))
+
+                        (map-delete players {player: tx-sender})
+                        (var-set total-players (- (var-get total-players) u1))
+                        (ok true)
+                    )
                 )
             )
         )
