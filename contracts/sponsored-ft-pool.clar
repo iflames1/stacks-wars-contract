@@ -8,24 +8,7 @@
 ;; TOKEN CONFIGURATION
 ;; ----------------------
 
-;; These will be set during deployment by the deployer
 (define-constant TOKEN_NAME "test-token")
-
-;; ----------------------
-;; TRAIT DEFINITION
-;; ----------------------
-
-(define-trait sip-010-trait
-    (
-        (transfer (uint principal principal (optional (buff 34))) (response bool uint))
-        (get-balance (principal) (response uint uint))
-        (get-total-supply () (response uint uint))
-        (get-name () (response (string-ascii 32) uint))
-        (get-symbol () (response (string-ascii 32) uint))
-        (get-decimals () (response uint uint))
-        (get-token-uri () (response (optional (string-ascii 256)) uint))
-    )
-)
 
 ;; ----------------------
 ;; CONSTANTS
@@ -37,7 +20,10 @@
 (define-constant POOL_SIZE u5000000)
 (define-constant FEE_PERCENTAGE u2)
 
+;; ----------------------
 ;; Error codes
+;; ----------------------
+
 (define-constant ERR_ALREADY_JOINED u5)
 (define-constant ERR_INSUFFICIENT_FUNDS u6)
 (define-constant ERR_TRANSFER_FAILED u7)
@@ -224,15 +210,3 @@
     (default-to false (get paid (map-get? collected-fees {player: player})))
 )
 
-(define-read-only (get-token-contract)
-    .test-token
-)
-
-;; ----------------------
-;; PUBLIC QUERY FUNCTIONS
-;; ----------------------
-
-;; Get pool balance
-(define-public (get-pool-balance)
-    (contract-call? .test-token get-balance (as-contract tx-sender))
-)
