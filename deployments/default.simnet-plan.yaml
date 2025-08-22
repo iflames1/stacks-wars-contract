@@ -55,6 +55,16 @@ plan:
             path: contracts/factory.clar
             clarity-version: 3
         - emulated-contract-publish:
+            contract-name: test-token
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/test-token.clar
+            clarity-version: 3
+        - emulated-contract-publish:
+            contract-name: sponsored-ft-pool
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/sponsored-ft-pool.clar
+            clarity-version: 3
+        - emulated-contract-publish:
             contract-name: sponsored-pool
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/sponsored-pool.clar

@@ -10,8 +10,18 @@ path = 'contracts/factory.clar'
 clarity_version = 3
 epoch = 3.0
 
+[contracts.sponsored-ft-pool]
+path = 'contracts/sponsored-ft-pool.clar'
+clarity_version = 3
+epoch = 3.0
+
 [contracts.sponsored-pool]
 path = 'contracts/sponsored-pool.clar'
+clarity_version = 3
+epoch = 3.0
+
+[contracts.test-token]
+path = 'contracts/test-token.clar'
 clarity_version = 3
 epoch = 3.0
 [repl.analysis]
