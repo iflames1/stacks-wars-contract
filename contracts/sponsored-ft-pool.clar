@@ -1,5 +1,5 @@
 ;; ==============================
-;; Stacks Wars - Token Pool Contract
+;; Stacks Wars - Fungible Token Pool Contract
 ;; ==============================
 ;; author: flames.stx
 ;; summary: Sponsored pool using external fungible tokens
@@ -35,6 +35,7 @@
 (define-constant ERR_NOT_JOINED u14)
 (define-constant ERR_NOT_SPONSORED u15)
 (define-constant ERR_POOL_NOT_EMPTY u16)
+(define-constant ERR_UNAUTHORIZED u17)
 
 ;; ----------------------
 ;; DATA VARIABLES
@@ -69,7 +70,6 @@
 
 (define-public (join-pool)
     (begin
-        ;; Check if player has already joined
         (asserts! (not (is-some (map-get? players {player: tx-sender}))) (err ERR_ALREADY_JOINED))
 
         (if (is-eq tx-sender DEPLOYER)
@@ -78,7 +78,6 @@
                 ;; Ensure pool isn't already funded
                 (asserts! (not (var-get pool-funded)) (err ERR_ALREADY_JOINED))
 
-                ;; Transfer tokens from deployer to contract
                 (match (contract-call? .test-token transfer POOL_SIZE tx-sender (as-contract tx-sender) none)
                     success
                     (begin
@@ -105,12 +104,9 @@
 
 (define-public (leave-pool (signature (buff 65)))
     (begin
-        ;; Ensure player has joined
         (let ((player-data (unwrap! (map-get? players {player: tx-sender}) (err ERR_NOT_JOINED))))
             (if (get is-sponsor player-data)
-                ;; Sponsor leaving - withdraw remaining tokens
                 (begin
-                    ;; Ensure no other players are still in the pool
                     (asserts! (is-eq (var-get total-players) u1) (err ERR_POOL_NOT_EMPTY))
 
                     ;; Verify signature for pool size amount
@@ -132,9 +128,8 @@
                         )
                     )
                 )
-                ;; Regular player leaving
+
                 (begin
-                    ;; Verify signature for amount 0
                     (let ((msg-hash (try! (construct-message-hash u0))))
                         (asserts! (secp256k1-verify msg-hash signature TRUSTED_PUBLIC_KEY) (err ERR_INVALID_SIGNATURE))
 
@@ -164,23 +159,19 @@
             (asserts! (secp256k1-verify msg-hash signature TRUSTED_PUBLIC_KEY) (err ERR_INVALID_SIGNATURE))
             (asserts! (>= current-balance amount) (err ERR_INSUFFICIENT_FUNDS))
 
-            ;; Handle the fee payment conditionally
             (let ((fee-result
                 (if (not has-paid-fee)
-                    ;; Transfer fee if not already paid
                     (match (as-contract (contract-call? .test-token transfer fee tx-sender STACKS_WARS_FEE_WALLET none))
                         fee-success
                         (begin
-                            ;; Mark fee as collected
                             (map-set collected-fees {player: tx-sender} {paid: true})
                             (ok true)
                         )
                         fee-error (err ERR_FEE_TRANSFER_FAILED)
                     )
-                    (ok true)  ;; Skip fee if already paid
+                    (ok true)
                 )))
 
-                ;; Check if fee payment was successful
                 (try! fee-result)
 
                 ;; Transfer reward to player
@@ -192,6 +183,27 @@
                     )
                     reward-error (err ERR_TRANSFER_FAILED)
                 )
+            )
+        )
+    )
+)
+
+(define-public (kick (player-to-kick principal))
+    (begin
+        (asserts! (is-eq tx-sender DEPLOYER) (err ERR_UNAUTHORIZED))
+
+        (asserts! (is-some (map-get? players {player: player-to-kick})) (err ERR_NOT_JOINED))
+
+        (asserts! (not (is-eq player-to-kick DEPLOYER)) (err ERR_UNAUTHORIZED))
+
+        (asserts! (not (has-claimed-reward player-to-kick)) (err ERR_REWARD_ALREADY_CLAIMED))
+
+        (let ((player-data (unwrap! (map-get? players {player: player-to-kick}) (err ERR_NOT_JOINED))))
+            (begin
+                (map-delete players {player: player-to-kick})
+                (var-set total-players (- (var-get total-players) u1))
+
+                (ok true)
             )
         )
     )

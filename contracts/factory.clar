@@ -2,6 +2,7 @@
 ;; Stacks Wars - Pool Contract
 ;; ==============================
 ;; author: flames.stx
+;; summary: Normal pool using STX
 
 ;; ----------------------
 ;; CONSTANTS
@@ -62,7 +63,6 @@
 
 (define-public (join)
     (begin
-        ;; Check if player has already joined
         (asserts! (not (is-some (map-get? players {player: tx-sender}))) (err ERR_ALREADY_JOINED))
 
         (asserts! (or
@@ -83,65 +83,10 @@
     )
 )
 
-(define-public (claim-reward (amount uint) (signature (buff 65)))
-    (begin
-        (asserts! (not (is-some (map-get? claimed-rewards {player: tx-sender}))) (err ERR_REWARD_ALREADY_CLAIMED))
-
-        (let (
-            (msg-hash (try! (construct-message-hash amount)))
-            (recipient tx-sender)
-            (fee (/ (* amount FEE_PERCENTAGE) u100))
-            (net-amount (- amount fee))
-            (has-paid-fee (has-paid-entry-fee tx-sender))
-        )
-            (asserts! (secp256k1-verify msg-hash signature TRUSTED_PUBLIC_KEY) (err ERR_INVALID_SIGNATURE))
-            (asserts! (>= (stx-get-balance (as-contract tx-sender)) amount) (err ERR_INSUFFICIENT_FUNDS))
-
-            ;; handle the fee payment
-            (let ((fee-result
-                (if (not has-paid-fee)
-                    ;; Transfer fee if not already paid
-                    (match (as-contract (stx-transfer? fee tx-sender STACKS_WARS_FEE_WALLET))
-                        fee-success
-                        (begin
-                            ;; Mark fee as collected
-                            (map-set collected-fees {player: tx-sender} {paid: true})
-                            (ok true)
-                        )
-                        error (begin
-                            (err ERR_FEE_TRANSFER_FAILED)
-                        )
-                    )
-                    (ok true)
-                )))
-
-                ;; Check if fee payment was successful
-                (try! fee-result)
-
-                ;; Second transfer: Send net reward to player
-                (match (as-contract (stx-transfer? net-amount tx-sender recipient))
-                    reward-success
-                    (begin
-                        ;; Mark reward as claimed
-                        (map-set claimed-rewards {player: recipient} {claimed: true, amount: amount})
-                        (ok true)
-                    )
-                    error
-                    (begin
-                        (err ERR_TRANSFER_FAILED)
-                    )
-                )
-            )
-        )
-    )
-)
-
 (define-public (leave (signature (buff 65)))
     (begin
-        ;; Ensure player did join
         (asserts! (is-some (map-get? players {player: tx-sender})) (err ERR_NOT_JOINED))
 
-        ;; Ensure contract has enough balance for refund
         (asserts! (>= (stx-get-balance (as-contract tx-sender)) ENTRY_FEE) (err ERR_INSUFFICIENT_FUNDS))
 
         (let (
@@ -164,28 +109,71 @@
     )
 )
 
+(define-public (claim-reward (amount uint) (signature (buff 65)))
+    (begin
+        (asserts! (not (is-some (map-get? claimed-rewards {player: tx-sender}))) (err ERR_REWARD_ALREADY_CLAIMED))
+
+        (let (
+            (msg-hash (try! (construct-message-hash amount)))
+            (recipient tx-sender)
+            (fee (/ (* amount FEE_PERCENTAGE) u100))
+            (net-amount (- amount fee))
+            (has-paid-fee (has-paid-entry-fee tx-sender))
+        )
+            (asserts! (secp256k1-verify msg-hash signature TRUSTED_PUBLIC_KEY) (err ERR_INVALID_SIGNATURE))
+            (asserts! (>= (stx-get-balance (as-contract tx-sender)) amount) (err ERR_INSUFFICIENT_FUNDS))
+
+            ;; handle the fee payment
+            (let ((fee-result
+                (if (not has-paid-fee)
+                    (match (as-contract (stx-transfer? fee tx-sender STACKS_WARS_FEE_WALLET))
+                        fee-success
+                        (begin
+                            ;; Mark fee as collected
+                            (map-set collected-fees {player: tx-sender} {paid: true})
+                            (ok true)
+                        )
+                        error (begin
+                            (err ERR_FEE_TRANSFER_FAILED)
+                        )
+                    )
+                    (ok true)
+                )))
+
+                (try! fee-result)
+
+                ;; Transfer reward to player
+                (match (as-contract (stx-transfer? net-amount tx-sender recipient))
+                    reward-success
+                    (begin
+                        (map-set claimed-rewards {player: recipient} {claimed: true, amount: amount})
+                        (ok true)
+                    )
+                    error
+                    (begin
+                        (err ERR_TRANSFER_FAILED)
+                    )
+                )
+            )
+        )
+    )
+)
+
 (define-public (kick (player-to-kick principal))
     (begin
-        ;; Only deployer can kick players
         (asserts! (is-eq tx-sender DEPLOYER) (err ERR_UNAUTHORIZED))
 
-        ;; Ensure target player has joined
         (asserts! (is-some (map-get? players {player: player-to-kick})) (err ERR_NOT_JOINED))
 
-        ;; Prevent deployer from kicking themselves
         (asserts! (not (is-eq player-to-kick DEPLOYER)) (err ERR_UNAUTHORIZED))
 
-        ;; Ensure player hasn't claimed rewards
         (asserts! (not (has-claimed-reward player-to-kick)) (err ERR_REWARD_ALREADY_CLAIMED))
 
-        ;; Ensure contract has enough balance for refund
         (asserts! (>= (stx-get-balance (as-contract tx-sender)) ENTRY_FEE) (err ERR_INSUFFICIENT_FUNDS))
 
-        ;; Transfer entry fee back to kicked player
         (match (as-contract (stx-transfer? ENTRY_FEE tx-sender player-to-kick))
             success
             (begin
-                ;; Remove player from pool
                 (map-delete players {player: player-to-kick})
                 (var-set total-players (- (var-get total-players) u1))
                 (ok true)
