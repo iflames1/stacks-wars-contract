@@ -28,6 +28,7 @@
 (define-constant ERR_REENTRANCY u13)
 (define-constant ERR_NOT_JOINED u14)
 (define-constant ERR_NOT_JOINABLE u15)
+(define-constant ERR_UNAUTHORIZED u16)
 
 ;; ----------------------
 ;; DATA VARIABLES
@@ -59,7 +60,7 @@
 ;; PUBLIC FUNCTIONS
 ;; ----------------------
 
-(define-public (join-pool)
+(define-public (join)
     (begin
         ;; Check if player has already joined
         (asserts! (not (is-some (map-get? players {player: tx-sender}))) (err ERR_ALREADY_JOINED))
@@ -135,9 +136,9 @@
     )
 )
 
-(define-public (leave-pool (signature (buff 65)))
+(define-public (leave (signature (buff 65)))
     (begin
-        ;; Ensure player has joined the pool
+        ;; Ensure player did join
         (asserts! (is-some (map-get? players {player: tx-sender})) (err ERR_NOT_JOINED))
 
         ;; Ensure contract has enough balance for refund
@@ -157,11 +158,39 @@
 
                     (ok true)
                 )
-                error
-                (begin
-                    (err ERR_TRANSFER_FAILED)
-                )
+                error (err ERR_TRANSFER_FAILED)
             )
+        )
+    )
+)
+
+(define-public (kick (player-to-kick principal))
+    (begin
+        ;; Only deployer can kick players
+        (asserts! (is-eq tx-sender DEPLOYER) (err ERR_UNAUTHORIZED))
+
+        ;; Ensure target player has joined
+        (asserts! (is-some (map-get? players {player: player-to-kick})) (err ERR_NOT_JOINED))
+
+        ;; Prevent deployer from kicking themselves
+        (asserts! (not (is-eq player-to-kick DEPLOYER)) (err ERR_UNAUTHORIZED))
+
+        ;; Ensure player hasn't claimed rewards
+        (asserts! (not (has-claimed-reward player-to-kick)) (err ERR_REWARD_ALREADY_CLAIMED))
+
+        ;; Ensure contract has enough balance for refund
+        (asserts! (>= (stx-get-balance (as-contract tx-sender)) ENTRY_FEE) (err ERR_INSUFFICIENT_FUNDS))
+
+        ;; Transfer entry fee back to kicked player
+        (match (as-contract (stx-transfer? ENTRY_FEE tx-sender player-to-kick))
+            success
+            (begin
+                ;; Remove player from pool
+                (map-delete players {player: player-to-kick})
+                (var-set total-players (- (var-get total-players) u1))
+                (ok true)
+            )
+            error (err ERR_TRANSFER_FAILED)
         )
     )
 )
