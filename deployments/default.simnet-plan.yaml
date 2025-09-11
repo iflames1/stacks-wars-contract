@@ -69,4 +69,9 @@ plan:
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/sponsored-pool.clar
             clarity-version: 3
+        - emulated-contract-publish:
+            contract-name: stacks-sweepers-pool
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/stacks-sweepers-pool.clar
+            clarity-version: 3
       epoch: "3.0"

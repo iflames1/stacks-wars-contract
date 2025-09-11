@@ -20,6 +20,11 @@ path = 'contracts/sponsored-pool.clar'
 clarity_version = 3
 epoch = 3.0
 
+[contracts.stacks-sweepers-pool]
+path = 'contracts/stacks-sweepers-pool.clar'
+clarity_version = 3
+epoch = 3.0
+
 [contracts.test-token]
 path = 'contracts/test-token.clar'
 clarity_version = 3
