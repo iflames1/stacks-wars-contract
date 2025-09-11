@@ -9,7 +9,7 @@
 ;; ----------------------
 
 (define-constant TRUSTED_PUBLIC_KEY 0x03ffe7c30724197e226ddc09b6340c078e7f42e3751c3d0654d067798850d22d09)
-(define-constant DEPLOYER 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM)
+(define-constant DEPLOYER tx-sender)
 
 ;; ----------------------
 ;; Error codes
