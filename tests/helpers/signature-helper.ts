@@ -8,6 +8,8 @@ import {
 	principalCV,
 	serializeCV,
 } from "@stacks/transactions";
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.test" });
 
 /**
  * Gets the trusted signer private key from environment variables
