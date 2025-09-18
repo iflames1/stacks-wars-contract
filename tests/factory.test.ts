@@ -1,54 +1,12 @@
 import { describe, expect, it, beforeEach } from "vitest";
 import { Cl } from "@stacks/transactions";
-import {
-	principalCV,
-	serializeCV,
-	signMessageHashRsv,
-	tupleCV,
-	uintCV,
-	createStacksPrivateKey,
-} from "@stacks/transactions";
-import { generateWallet } from "@stacks/wallet-sdk";
-import { createHash } from "crypto";
+import { generateSignature, generateInvalidSignature } from "./helpers/signature-helper";
 
 const accounts = simnet.getAccounts();
 const deployer = simnet.deployer;
 const wallet1 = accounts.get("wallet_1")!;
 const wallet2 = accounts.get("wallet_2")!;
 const wallet3 = accounts.get("wallet_3")!;
-
-// Helper function to generate signatures for testing
-const getSignerPrivateKey = async () => {
-	const secretKey =
-		"unfold wine clarify fiscal entire phrase stadium mushroom best junior guard wreck huge chase target social casual plunge project field spider spare laptop gospel";
-	const wallet = await generateWallet({ secretKey, password: "" });
-	return wallet.accounts[0].stxPrivateKey;
-};
-
-const generateSignature = async (
-	amount: number,
-	claimerAddress: string,
-	contractAddress: string
-) => {
-	const message = tupleCV({
-		amount: uintCV(amount),
-		winner: principalCV(claimerAddress),
-		contract: principalCV(contractAddress),
-	});
-	const serialized = serializeCV(message);
-	const buffer = Buffer.from(serialized);
-	const hash = createHash("sha256").update(buffer).digest();
-
-	const privateKeyString = await getSignerPrivateKey();
-	const privateKey = createStacksPrivateKey(privateKeyString);
-
-	const signature = signMessageHashRsv({
-		messageHash: hash.toString("hex"),
-		privateKey,
-	});
-
-	return signature.data;
-};
 
 describe("Factory Contract Tests", () => {
 	beforeEach(() => {
@@ -260,7 +218,7 @@ describe("Factory Contract Tests", () => {
 
 		it("should reject invalid signature", () => {
 			const rewardAmount = 10000000;
-			const invalidSignature = "0".repeat(130); // Invalid 65-byte signature
+			const invalidSignature = generateInvalidSignature();
 
 			const result = simnet.callPublicFn(
 				"factory",
