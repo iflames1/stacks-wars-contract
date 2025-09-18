@@ -1,6 +1,6 @@
 (define-constant ENTRY_FEE u1000000) ;; 1 STX
 (define-constant CONTRACT (as-contract tx-sender))
-(define-constant TRUSTED_PUBLIC_KEY 0x0390a5cac7c33fda49f70bc1b0866fa0ba7a9440d9de647fecb8132ceb76a94dfa)
+(define-constant TRUSTED_PUBLIC_KEY 0x02cec878c505b9626fac2363f8566c9fb256e53a78bd3d6ed1297f9399d67c89fb)
 
 (define-data-var total-players uint u0)
 

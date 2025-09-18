@@ -36,46 +36,9 @@ cd contracts
 To test the contracts locally, use:
 
 ```sh
-npm install
-npm test
+bun install
+bun test
 ```
-
-## 🛠 Deployment
-
-Contracts are deployed on the **Stacks testnet & mainnet**.
-
-<!--Deploy using:
-
-```sh
-clarity-cli contract deploy <contract-name> --network testnet
-```
-
-Modify `<contract-name>` and **ensure the network is correctly set**.-->
-
-<!--## 📜 Contract Details
-
--   **Game Logic Contract**: Manages the core game mechanics.
--   **Betting Contract**: Handles bets, payouts, and escrow.
--   **Governance Contract** (Upcoming): Enables community participation.
-
-## 📡 Interacting with Contracts
-
-Use **Stacks Explorer** or **Stacks.js** to interact with deployed contracts:
-
-```js
-import { StacksMocknet } from "@stacks/network";
-import { callReadOnlyFunction } from "@stacks/transactions";
-
-const network = new StacksMocknet();
-const result = await callReadOnlyFunction({
-	contractAddress: "SPXXXXXX",
-	contractName: "stacks-wars-game",
-	functionName: "get-game-status",
-	functionArgs: [],
-	senderAddress: "STXXXXXX",
-	network,
-});
-```-->
 
 ## 🔗 Related Repositories
 
@@ -83,11 +46,19 @@ const result = await callReadOnlyFunction({
 
 ## 📢 Contributing
 
-Want to contribute? Open a PR or discuss in [Stacks Wars Discord](https://discord.gg/YsgFKsf5U6)!
+Want to contribute? Open a PR or discuss in [Stacks Wars Telegram](https://t.me/stackswars)!
 
 ## 📄 License
 
-This project is licensed under the **MIT License**.
+**All Rights Reserved - Proprietary Software**
+
+This software and its source code are the exclusive property of the Stacks Wars development team. Unauthorized copying, distribution, modification, or use of this software is strictly prohibited and may result in severe legal action including but not limited to:
+
+-   Civil lawsuits for copyright infringement
+-   Monetary damages and legal fees
+-   Criminal prosecution where applicable
+
+This software is protected by copyright law and international treaties. Any unauthorized use, reproduction, or distribution may result in significant financial penalties and legal consequences.
 
 ---
 

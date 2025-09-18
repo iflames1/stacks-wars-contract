@@ -17,10 +17,16 @@
     "@stacks/transactions": "^6.17.0",
     "@stacks/wallet-sdk": "^7.0.5",
     "chokidar-cli": "^3.0.0",
-    "crypto": "^1.0.1",
+    "dotenv": "^17.2.2",
     "typescript": "^5.2.2",
     "vite": "^5.0.6",
     "vitest": "^1.3.1",
     "vitest-environment-clarinet": "^2.0.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
   }
 }
