@@ -16,17 +16,16 @@ import {
 const getSignerPrivateKey = async (): Promise<string> => {
 	// Try to get from environment first
 	const secretKey = process.env.TRUSTED_SIGNER_SECRET_KEY;
-	
+
 	if (secretKey) {
 		const wallet = await generateWallet({ secretKey, password: "" });
 		return wallet.accounts[0].stxPrivateKey;
 	}
-	
-	// Fallback to hardcoded for backwards compatibility
-	const fallbackSecretKey =
-		"unfold wine clarify fiscal entire phrase stadium mushroom best junior guard wreck huge chase target social casual plunge project field spider spare laptop gospel";
-	const wallet = await generateWallet({ secretKey: fallbackSecretKey, password: "" });
-	return wallet.accounts[0].stxPrivateKey;
+
+	// Fallback to a default private key for testing
+	throw new Error(
+		"TRUSTED_SIGNER_SECRET_KEY environment variable is required"
+	);
 };
 
 /**
@@ -46,7 +45,7 @@ export const generateSignature = async (
 		winner: principalCV(claimerAddress),
 		contract: principalCV(contractAddress),
 	});
-	
+
 	const serialized = serializeCV(message);
 	const buffer = Buffer.from(serialized);
 	const hash = createHash("sha256").update(buffer).digest();
