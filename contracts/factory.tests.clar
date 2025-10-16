@@ -78,6 +78,39 @@
     )
 )
 
+;; Test: leave removes player from map, decreases players count, and deducts ENTRY_FEE from pool balance
+(define-public (test-leave (signature (buff 65)))
+    (let
+        (
+            (players-before (get-total-players))
+            (exists-before (has-player-joined tx-sender))
+            (balance-before (get-pool-balance))
+        )
+
+        (match (leave signature)
+            success
+            (let
+                (
+                    (players-after (get-total-players))
+                    (exists-after (has-player-joined tx-sender))
+                    (balance-after (get-pool-balance))
+                )
+                (asserts!
+                    (and
+                        (is-eq players-after (- players-before u1))
+                        (is-eq balance-after (- balance-before ENTRY_FEE))
+                        exists-before
+                        (not exists-after)
+                    )
+                    ERR_ASSERTION_FAILED
+                )
+                (ok true)
+            )
+            error (ok false)  ;; Discard the test case if leave fails
+        )
+    )
+)
+
 ;; ----------------------
 ;; DISCARD FUNCTIONS
 ;; ----------------------
