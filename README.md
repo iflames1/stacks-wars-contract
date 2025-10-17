@@ -11,6 +11,7 @@ This repo includes:
 -   **Game Contracts**: Smart contracts for different game types.
 -   **Betting System**: Secure and transparent betting mechanisms.
 -   **Token Integration**: STX-based transactions and rewards.
+-   **Property-Based Testing**: Fuzz testing using Rendezvous to verify contract behavior.
 -   **Governance Functions**: (Upcoming) Community-driven game voting & proposals.
 
 ## 🚀 Getting Started
@@ -20,6 +21,7 @@ This repo includes:
 Ensure you have the following installed:
 
 -   **[Clarinet](https://github.com/hirosystems/clarinet)**
+-   **[Rendezvous](https://github.com/stacks-network/rendezvous)** (for fuzz testing)
 -   Node.js (for running scripts if needed)
 
 ### Installation
@@ -33,12 +35,34 @@ cd contracts
 
 ### Running Tests
 
-To test the contracts locally, use:
+To run standard tests:
 
 ```sh
 bun install
 bun test
 ```
+
+### Running Fuzz Tests with Rendezvous
+
+For property-based testing with Rendezvous:
+
+```sh
+# Run property tests for a specific contract with signature dialer
+rv . <contract-name> test --dial=./dialer.cjs
+
+# Run invariant tests for a specific contract with signature dialer
+rv . <contract-name> invariant --dial=./dialer.cjs
+
+# Examples:
+rv . factory test --dial=./dialer.cjs
+rv . sponsored-pool test --dial=./dialer.cjs
+rv . sponsored-ft-pool test --dial=./dialer.cjs
+
+# Run with increased number of test runs
+rv . factory test --dial=./dialer.cjs --runs=100
+```
+
+The dialer provides automatic signature generation for authenticated functions like `leave` and `claim-reward`.
 
 ## 🔗 Related Repositories
 
