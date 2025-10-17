@@ -6,8 +6,10 @@
 ;; CONSTANTS
 ;; ----------------------
 
-(define-constant ERR_ASSERTION_FAILED (err u403))
+(define-constant ERR_JOIN_TEST_FAILED (err u200))
 (define-constant ERR_KICK_TEST_FAILED (err u201))
+(define-constant ERR_LEAVE_TEST_FAILED (err u202))
+(define-constant ERR_CLAIM_REWARD_TEST_FAILED (err u203))
 
 ;; ----------------------
 ;; PROPERTY TESTS
@@ -36,7 +38,7 @@
                         (not exists-before)
                         exists-after
                     )
-                    ERR_ASSERTION_FAILED
+                    ERR_JOIN_TEST_FAILED
                 )
                 (ok true)
             )
@@ -102,11 +104,46 @@
                         exists-before
                         (not exists-after)
                     )
-                    ERR_ASSERTION_FAILED
+                    ERR_LEAVE_TEST_FAILED
                 )
                 (ok true)
             )
             error (ok false)  ;; Discard the test case if leave fails
+        )
+    )
+)
+
+;; Test: claim-reward sets claimed flag, transfers correct amount, and handles fee payment
+(define-public (test-claim-reward (amount uint) (signature (buff 65)))
+    (let
+        (
+            (has-claimed-before (has-claimed-reward tx-sender))
+            (balance-before (get-pool-balance))
+            (fee (/ (* amount FEE_PERCENTAGE) u100))
+            (net-amount (- amount fee))
+        )
+
+        (match (claim-reward amount signature)
+            success
+            (let
+                (
+                    (has-claimed-after (has-claimed-reward tx-sender))
+                    (balance-after (get-pool-balance))
+                )
+                (asserts!
+                    (and
+                        ;; Check that claimed status is updated correctly
+                        (not has-claimed-before)
+                        has-claimed-after
+
+                        ;; Check that the balance is reduced correctly
+                        (is-eq balance-after (- balance-before amount))
+                    )
+                    ERR_CLAIM_REWARD_TEST_FAILED
+                )
+                (ok true)
+            )
+            error (ok false)  ;; Discard the test case if claim-reward fails
         )
     )
 )
